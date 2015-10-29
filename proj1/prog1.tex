@@ -1,0 +1,226 @@
+\documentclass{article}
+\usepackage[margin = 1in]{geometry}
+\usepackage{tcolorbox}
+\usepackage{enumerate}
+\usepackage{ragged2e}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{subfig}
+\usepackage{epstopdf}
+\usepackage{xcolor}
+\usepackage[justification=centering]{caption}
+
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\newcommand{\qed}{\hfill$\blacksquare$}
+
+\begin{document}
+\RaggedRight
+\pagestyle{fancy}
+
+\rhead{\footnotesize\uppercase{16-831: Statistical Techniques in Robotics}} 
+
+{\large Project 1: The Weighted Majority Algorithm} \\[0.5\parsep]
+Dawei Wang (daweiwan@andrew.cmu.edu)
+
+\vfill
+
+\begin{enumerate}
+	\item {\bf Realizability}: there exists a hypothesis $h^*\in\mathcal{H}$ such that
+		for any $t=1,2,\dots$, $h^*(\vec x^{(t)})=y^{(t)}$. \\ This assumption provides 
+		performance guarantees for the online learner. \qed
+	\item {\bf Hypothesis class}: the set of all mappings from the set of observations $\mathcal{X}$
+		to the set of outcomes $\mathcal{Y}$. \\ It is finite. It provides an upper
+		bound on the number of mistakes that a learner can make. \qed
+	\item Since we only listen to the \emph{expert} with the fewest mistakes, if the \emph{best}
+		expert has made $m^*$ mistakes, 1) any expert must have made at least $m^*$ mistakes, 2) 
+		any expert that has made at least $m^*+1$ mistakes will never be selected for making
+		another prediction, and it is therefore impossible for them to make more mistakes. Hence,
+		an upper bound for the number of mistakes $M$ is
+		\begin{equation}
+			m^*+(N-1)(m^*+1)=N\cdot m^*+(N-1), 
+		\end{equation}
+		assuming the worst case, where all experts except for the best expert has made $m^*+1$ mistakes. \qed
+	\item (1) The optimal $\mu$ provides the tightest upper bound for the expected regret. By Jensen's inequality, 
+		\begin{equation}
+			\mu m^*+\frac{\ln N}{\mu}\ge 2\left(\mu m^*\cdot\frac{\ln N}{\mu}\right)^{-1}
+		\end{equation}
+		the equality holds if and only if $\mu m^*=\mu^{-1}\ln N$, therefore the optimal value	
+		$\mu=\sqrt{m^{-*}\ln N}$. \\[\parsep]
+		(2) In this case we can eliminate (or devalue the opinions of) experts more frequently without
+		having to worry about running out of experts. Therefore, a large $\mu$ should be selected.\\[\parsep]
+		(3) If $m^*=O(T)$, for any finite $\mu$, 
+		\begin{equation}
+			\lim_{T\rightarrow\infty}\frac{E(R)}{T}=
+			\lim_{T\rightarrow\infty}\left[\mu\cdot\frac{O(T)}{T}+\frac1T\frac{\ln N}{\mu}\right]=
+			\mu\cdot O(1)
+		\end{equation}
+		To approach the criterion for a {\it no-regret} learner as much as possible, $\mu$ should be small.
+		However, if $m^*$ is sub-linear in $T$, the first term would most likely to converge to zero quickly,
+		regardless of the choice of $\mu$; for the second term, since $\mu$ is in the denominator, 
+		selecting a larger $\mu$ would be helpful to enable the average regret to converge to zero quicker. 
+		\qed
+	\item (1) Since the adversary knows the experts' predictions and their weights, the prediction made 
+		by the deterministic learner can be derived; the adversary simply selects the label opposite to that 
+		prediction, such that the learner is guaranteed to make one mistake every round. \\[\parsep]		
+		(2) For randomized weighted majority, the largest expected loss is 0.5 mistakes per round. Basically,
+		the adversary sets $y_t=1$ if the expected label $\tilde y_t=\sum_i\hat{y}_i{w_i}/\sum_i{w_i}$
+		 is less than a half, or $y_t=0$ otherwise. In this way, the expected loss 
+		 per round is, for $\tilde y_t<0.5$ and $y_t=1$, 
+		\begin{equation}
+			\frac{1\cdot\sum_{i,\hat{y}_i=0}w_i+0\cdot\sum_{i,\hat{y}_i=1}w_i}{\sum_iw_i}=
+			\frac{\sum_i(1-\hat{y}_i)w_i}{\sum_iw_i}=1-\frac{\sum_i\hat{y}_iw_i}{\sum_iw_i}>0.5
+		\end{equation}
+		and symmetrically, in the case that $\tilde y_t\ge 0.5$, $y_t=0$:
+		\begin{equation}
+			\frac{0\cdot\sum_{i,\hat{y}_i=0}w_i+1\cdot\sum_{i,\hat{y}_i=1}w_i}{\sum_iw_i}=
+			\frac{\sum_i\hat{y}_iw_i}{\sum_iw_i}\ge0.5
+		\end{equation}
+		therefore, with this strategy, the learner is only statistically guaranteed to make 0.5 mistakes
+		per round, half as many as that made by a deterministic learner. Essentially randomization creates
+		a probability that the label $y_t$ deterministically computed by the adversary may be the same as 
+		the prediction $\hat y_t$, therefore lowering the expected loss by being less likely to make mistakes.\qed
+\end{enumerate}
+
+\newpage
+
+The programming part revolves around three classes of elements: the experts ({\tt expert.py}), the natures ({\tt nature.py}), 
+and the learners ({\tt learner.py}). Instances of the same class share a common interface but may have
+different traits in decision making. Here is a brief introduction: 
+
+\paragraph{Natures} There are four natures. All of them generate observations that consist of 
+\begin{itemize}\itemsep-2pt
+	\item {\tt match\_number}: $1, 2, 3, \dots$, incremented each time the nature produces an observation; 
+	\item {\tt weather}: either {\tt sunny} or {\tt rainy}, selected uniformly at random; 
+	\item {\tt time}: either {\tt afternoon} or {\tt evening}, selected uniformly at random;
+	\item {\tt location}: either {\tt home} or {\tt away}, selected uniformly at random.
+\end{itemize}
+However, different natures have different policies for generating the label: 
+\begin{itemize}\itemsep-1pt
+	\item {\tt NaiveNature}: either {\tt true} or {\tt false}, selected uniformly at random (stochastic); 
+	\item {\tt TrialNature}: {\tt true} if {\tt match\_number} is not a multiple of three, {\tt false} otherwise (deterministic); 
+	\item {\tt ChaoticNature}: {\tt true} if the expected outcome derived by applying the \emph{weighted 
+		majority algorithm} on the weights and the predictions obtained from the experts associated 
+		with the learner leans towards {\tt false}, and {\tt false} otherwise (adversarial); 
+	\item {\tt LawfulNature}: {\tt true} if the {\it score} obtained with a weighted vote from {\tt location}, 
+		{\tt home}, and {\tt time}, with weights 0.45, 0.35, and 0.20 for being {\tt home}, {\tt evening}, {\tt sunny} respectively, 
+		is greater than or equal to 0.5, or {\tt false} otherwise. 
+\end{itemize}
+
+\paragraph{Experts} There are seven experts. They have different policies for making predictions: 
+\begin{itemize}\itemsep-1pt
+	\item {\tt NaiveExpert}: either {\tt true} or {\tt false}, selected uniformly at random; 
+	\item {\tt OptimisticExpert}: always {\tt true}; 
+	\item {\tt PessimisticExpert}: always {\tt false}; 
+	\item {\tt DualExpert}: {\tt true} if {\tt round\_number} is not a multiple of two, {\tt false} otherwise;
+	\item {\tt WeatherExpert}: {\tt true} if {\tt weather} is {\tt sunny}, {\tt false} otherwise; 
+	\item {\tt TimeExpert}: {\tt true} if {\tt time} is {\tt evening}, {\tt false} otherwise; 
+	\item {\tt HomeAdvantageExpert}: {\tt true} if {\tt location} is {\tt home}, {\tt false} otherwise. 
+\end{itemize}
+
+\paragraph{Learners} There are three learners. They treat the experts differently: 
+\begin{itemize}\itemsep-1pt
+	\item {\tt NaiveLearner}: chooses from {\tt true} and {\tt false} uniformly at random as its final prediction; 
+	\item {\tt WeightedMajorityLearner}: uses the {\it weighted majority} algorithm to combine experts' predictions;
+	\item {\tt RandomizedWeightedMajorityLearner}: uses the {\it randomized weighted majority} algorithm. 
+\end{itemize}
+
+\paragraph{\tt >>>} {\tt main.py} is the script that connects all these elements, which essentially, 
+\begin{enumerate}\itemsep-1pt
+	\item Instantiates the nature and the learner of our choice,
+	\item Lets the learner hire the experts of our choice, 
+	\item Iterates for {\tt round\_number}-many times, 
+	\begin{enumerate}
+		\item Lets the nature produce an observation; 
+		\item Feeds the observation to the learner; 
+		\item Lets the nature produce the true label, which may peek at the learner if adversarial; 
+		\item Feeds the true label back to the learner, which then updates the weights;
+		\item Records the regrets and the loss for this round; 
+	\end{enumerate}
+	\item Computes the cumulative regrets and losses, 
+	\item Plots the cumulative regrets and losses. \qed
+\end{enumerate}
+
+\newpage
+\newcommand{\rlplot}[1]{\includegraphics[width = 0.33\textwidth, trim = 6mm 0 6mm 0]{images/#1.eps}\label{#1}}
+\begin{figure}
+	\centering\rlplot{wma-naive}\rlplot{wma-trial}\rlplot{wma-chaotic}
+	\caption{Weighted Majority versus {\tt NaiveNature}, {\tt TrialNature}, and {\tt ChaoticNature} \\
+		{\footnotesize\textcolor{blue}{- - - losses}, \textcolor{red}{--- regrets}, penalty = 0.50}}
+	\label{wma-vs-3natures}
+\end{figure}
+
+\paragraph{Section 3.3}See Figure \ref{wma-vs-3natures}. The cumulative losses keep increasing since the learner
+does not have the expert resources to fully represent the policy adopted by the nature to generate its labels. 
+\begin{itemize}
+	\item {\tt NaiveNature}: the expected loss is just half of the round number, since the nature generates
+		the label uniformly at random. This seems to be the case regardless of the experts hired by the learner. 
+		The regret walks randomly around zero since neither the learner or the experts have any idea of how the 
+		nature is generating the labels, let alone being able to outperform each other. 
+	\item {\tt TrialNature}: the nature is producing a deterministic sequence of {\tt true}, {\tt true}, {\tt false}, 
+		{\tt true}, {\tt true}, {\tt false}, $\dots$, and the learner will make one mistake when the outcome flips, 
+		since it \emph{incorrectly} adjusts the weights to accommodate the previous mistake while the situation 
+		is actually alternating, which accounts for two thirds of the time. The regret grows one third as 
+		fast as the round number because the {\tt OptimisticExpert} is correct for two thirds of the time. 
+	\item {\tt ChaoticNature}: the nature in this case {\it correctly} assumes that the learner has adopted
+		the \emph{weighted majority} algorithm and is consequently capable of producing exactly the opposite
+		label each single time, guaranteeing that the learner will make one mistake each round. However, if 
+		the learner has instead been listening to either the {\tt PessimisticExpert} or the {\tt OptimisticExpert}, 
+		neglecting the weights and other predictions, it will be correct for half of the time, explaining the
+		observation that the regret grows half as fast as the loss. This latter case is true because the nature,
+		although adversarial in nature, fails to see through the policy that the learner has adopted. \qed
+\end{itemize}
+
+\begin{figure}
+	\centering\rlplot{rwma-naive}\rlplot{rwma-trial}\rlplot{rwma-chaotic}
+	\rlplot{rwma-naive-02}\rlplot{rwma-trial-02}\rlplot{rwma-chaotic-02}
+	\caption{Randomized Weighted Majority versus {\tt NaiveNature}, {\tt TrialNature}, and {\tt ChaoticNature} \\
+		{\footnotesize\textcolor{blue}{- - - losses}, \textcolor{red}{--- regrets}, penalty = 0.50 (top) and 0.20 (bottom)}}
+	\label{rwma-vs-3natures}
+\end{figure}
+
+\paragraph{Section 3.4}See Figure \ref{rwma-vs-3natures}. The situation for {\tt NaiveNature} has not changed 
+substantially because the nature has \emph{already} been making decisions uniformly at random. The performance
+against {\tt TrialNature} has improved: it seems that the expected loss is half of the round number; however, 
+the regret is still positive since the learner is still outperformed by the {\tt OptimisticExpert}. As for the
+{\tt ChaoticNature}, the learner has been able to perform much better, since the label deterministically computed
+by the nature cannot always be the exact opposite of a stochastic prediction anymore. The penalty does not affect
+the results that much, except for the third nature, where a smaller penalty is preferred, presumably because the
+learner is less likely to be misled to penalize its experts by the adversarial nature. \qed
+
+\paragraph{Section 3.5} The following experts have been added to the pool: 
+\begin{itemize}\itemsep-2pt
+	\item {\tt WeatherExpert}, and
+	\item {\tt TimeExpert}, and
+	\item {\tt HomeAdvantageExpert};
+\end{itemize}
+additional features include {\tt weather}, {\tt time}, and {\tt location}, as described earlier. A new
+deterministic nature, {\tt LawfulNature} has also been introduced, which computes the label \emph{lawfully}
+with a majority vote from the aforementioned three factors. The idea is that although each expert may 
+not be able to predict the outcome prefectly, but with the \emph{weighted majority} algorithm, the learner
+should be able to combine the opinions of the experts with their associated weights converging to the true
+weights. See Figure \ref{lawful-nature}. 
+
+\renewcommand{\rlplot}[2]{\subfloat[#1]{\includegraphics[width = 0.45\textwidth, trim = 6mm 0 6mm 0]{images/#2.eps}\label{#2}}}
+\begin{figure}[h!]
+	\centering\rlplot{6 Experts + Weighted Majority}{lawful-wma-6}
+	\rlplot{6 Experts + Randomized Weighted Majority}{lawful-rwma-6}\\
+	\rlplot{3 Experts + Weighted Majority}{lawful-wma-3}
+	\rlplot{3 Experts + Randomized Weighted Majority}{lawful-rwma-3}
+	\caption{Learners versus {\tt LawfulNature}, with All Experts or New Experts Only \\
+		{\footnotesize\textcolor{blue}{- - - losses}, \textcolor{red}{--- regrets}, penalty = 0.50}}
+	\label{lawful-nature}
+\end{figure}
+
+The result is very interesting. The learner that uses the {\it weighted majority} algorithm hardly
+makes any mistakes, largely thanks to the fact that the initial weights are more or less close to the
+true weights, and also that both the outcome and the loss are binary. This actually makes perfect sense. 
+However, the stochastic learner seems to be performing much worse, presumably due to the fact that
+the learner randomly deviates from the initial weights and then gets lost, since it only receives
+one feedback for all the experts it has hired, and it is therefore hard to discriminate between them. 
+Nonetheless, generally speaking, since the number of rounds has been increased to 1000, a cumulative regret
+of roughly two digits is quite impressive, in comparison to the dumb experts and shrewd natures we had earlier. \qed
+
+
+		
+\end{document}
