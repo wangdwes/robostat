@@ -6,6 +6,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{fancyhdr}
+\usepackage{booktabs}
 \usepackage{subfig}
 \usepackage{epstopdf}
 \usepackage{xcolor}
@@ -169,8 +170,89 @@ Dawei Wang (daweiwan@andrew.cmu.edu)
 	\end{flalign}
 	therefore the proposed sub-gradient $\nabla l_t(w)$ is valid. \qed
 \end{itemize}
-\vfill
 
+
+\newpage
+{\large\bf Programming: List Prediction}\\[1em]
+
+Run {\tt gen\_plots.m} to obtain Figure \ref{listpred}. A linear regressor is used
+over all three algorithms for fair comparison; an extra intercept term is explicitly
+appended to each feature vector (trajectory). It is expected that the success ratio
+will be monotonically increasing as $k$ continues to grow; for both training and testing, 
+list prediction strategies, with or without feature update, outperform the naive strategy
+consistently. This can be explained by the fact that list prediction attempts to 
+explore diverse options by greedily selecting the features that yield the greatest
+marginal benefits, as opposed to the naive strategy which does not. This property
+is particularly important when the benefit function is \emph{multiple guess}. Updating
+the features essentially incorporates the diversity information into the features, allowing
+the learner to exploit them more directly, therefore resulting in better accuracies. Testing
+accuracies are generally lower than training accuracies due to generalization errors. \qed
+\\[1em]
+
+\begin{figure}
+	\centering
+	\includegraphics[width = 0.45\textwidth]{train.eps}
+	\includegraphics[width = 0.45\textwidth]{test.eps}	
+	\caption{Performance of List Prediction Algorithms (Training: Left; Testing: Right)}
+	\label{listpred}
+\end{figure}
+
+{\large\bf Programming: Online SVM}\\[1em]
+
+Run {\tt gen\_results.m} to obtain Table \ref{onlinesvm}. (1) Each element dictates the binary
+mis-classification error (chance error) when the online support vector machine is run on 
+the dataset constructed by combining the data points from the two classes, as displayed
+at its corresponding row and column titles. (2) Apparently there are a few combinations
+that were not classified well (errors were marginally smaller than the chance errors)
+such as (Pole, Vegetation), (Wire, Vegetation), (Pole, Facade), and (Wire, Facade). This
+may be primarily attributed to the quality (distinctiveness) of the features. (3) It took
+roughly 10 seconds to compute that table. The time complexity is linear in the number of
+data points and the number of features. (4) The next page includes some images from 
+select combinations of classes. \qed 
+
+\begin{table}
+	\centering
+	\caption{Binary Mis-classification Errors (Chance Errors) (\%)} 
+	\begin{tabular}{cccccc}\toprule
+		&Vegetation&Wire&Pole&Ground&Facade\\ \midrule
+		Count & 8322 & 818 & 1429 & 67161 & 12092 \\ \midrule
+		Vegetation & - & 8.96 (8.95) & 11.08 (14.65) & 0.56 (11.02) & 16.56 (40.77)\\
+		Wire & 8.96 (8.95) & - & 5.61 (36.40) & 0.20 (1.20) & 6.34 (6.34) \\
+		Pole & 13.68 (14.65) & 6.19 (36.40) & - & 0.18 (2.08) & 10.13 (10.57) \\
+		Ground & 0.55 (11.02) & 0.21 (1.20) & 0.19 (2.08) & - & 0.55 (15.26) \\
+		Facade & 16.59 (40.77) & 6.34 (6.34) & 10.26 (10.57) & 0.53 (15.26) & - \\ \bottomrule
+	\end{tabular}
+	\label{onlinesvm}
+\end{table}
+
+\newpage
+\begin{figure}
+	\centering
+	\subfloat[Ground vs. Vegetation]{\includegraphics[width = 0.45\textwidth]{images/4vs1.jpg}}
+	\subfloat[Ground vs. Wire]{\includegraphics[width = 0.45\textwidth]{images/4vs2.jpg}} \\
+	\subfloat[Ground vs. Pole]{\includegraphics[width = 0.45\textwidth]{images/4vs3.jpg}}
+	\subfloat[Ground vs. Facade]{\includegraphics[width = 0.45\textwidth]{images/4vs5.jpg}}	
+	\caption{Images of the Classified Data}
+\end{figure}
+
+{\large\bf Appendix: List of Functions and Scripts}\\[1em]
+The implementation is entirely in MATLAB. 
+\begin{itemize}\itemsep-1pt
+	\item {\tt ftupdate.m}: update the features by appending similarity metrics;
+	\item {\tt lblupdate.m}: update the labels by replacing them with marginal benefits;
+	\item {\tt train.m}: train a linear regressor given features and labels;
+	\item {\tt predict.m}: pick the best data point for each environment, given the model and features;
+	\item {\tt naive.m}: the function that implements the naive prediction strategy;
+	\item {\tt listpred.m}: the function that implements the list prediction strategy; 
+	\item {\tt lpwftupdate.m}: the function that implements the list prediction strategy
+		with feature update. 
+	\item {\tt onlinesvm.m}: the function that implements online SVM; 
+	\item {\tt gen\_plots.m}: a script that executes all the list prediction strategies;
+	\item {\tt gen\_results.m}: a script that runs the online SVM on all possible pairs of classes; 
+	\item {\tt fscatter3.m}: a third-party script that plots 3D point cloud in MATLAB; 
+	\item {\tt data/}: a directory that contains all the data files. 
+\end{itemize}
+The submission also includes this writeup. 
 		
 \end{document}
 

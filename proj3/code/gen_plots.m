@@ -1,20 +1,27 @@
 
-load('data.mat'); 
+load(fullfile('data', 'data.mat')); 
 
 % just invoke our subroutines are get the results. 
 % we can optionally take the labels and compute the little same variance bars. 
 
 nr_iters = 8; 
-ratio_naive = naive(feat_train, result_train, feat_test, result_test, numTrajPerEnv); 
-ratio_listpred = listpred(feat_train, result_train, feat_test, result_test, numTrajPerEnv, nr_iters); 
-ratio_lpwftupdate = lpwftupdate(feat_train, result_train, feat_test, result_test, numTrajPerEnv, nr_iters); 
 
-% and - we just plot everything! 
+[rtrain1, rtest1] = naive(feat_train, result_train, feat_test, result_test, numTrajPerEnv); 
+[rtrain2, rtest2] = listpred(feat_train, result_train, feat_test, result_test, numTrajPerEnv, nr_iters); 
+[rtrain3, rtest3] = lpwftupdate(feat_train, result_train, feat_test, result_test, numTrajPerEnv, nr_iters); 
 
-plot([ratio_naive(1: nr_iters) ratio_listpred ratio_lpwftupdate], '-s'); 
+figure; 
+plot([rtrain1(1: nr_iters) rtrain2 rtrain3], '-s'); 
 grid on; 
 xlabel('k');
 ylabel('Success Ratio');
-title('Performance Comparison of List Prediction Algorithms'); 
+title('Training Performance of List Prediction Algorithms'); 
 legend('Naive', 'List Prediction', 'List Prediction with Feature Update', 'Location', 'Best'); 
 
+figure; 
+plot([rtest1(1: nr_iters) rtest2 rtest3], '-s'); 
+grid on; 
+xlabel('k');
+ylabel('Success Ratio');
+title('Testing Performance of List Prediction Algorithms'); 
+legend('Naive', 'List Prediction', 'List Prediction with Feature Update', 'Location', 'Best'); 
