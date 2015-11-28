@@ -24,7 +24,6 @@ namespace {
     double remainder = sampler(generator) * step, cumul = weights.front(); 
     for (int spot = 0, index = 0; spot < particles.size(); ++spot, (remainder += step)) {
       while (remainder > cumul) cumul += weights[++index]; 
-      if (index == particles.size()) std::cout << "NOPE" << std::endl;
       resampled_particles[spot] = particles[index]; 
     }
 

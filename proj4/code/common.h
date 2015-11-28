@@ -14,6 +14,12 @@ namespace {
   typedef Pose Odometry; 
   typedef std::vector<double> LaserScan;
 
+  double error_lambda = 5e-3; 
+  double error_percentage = 0.75; 
+  double noise_alpha = 1e-5; 
+  double prob_threshold = 0.85; 
+  size_t number_sigmas = 24; 
+
   const double pi = 3.14159265358;
   const double halfpi = pi * 0.5; 
   const double dblpi = pi * 2.0; 

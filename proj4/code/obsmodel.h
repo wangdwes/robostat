@@ -12,11 +12,11 @@
 namespace {
 
   const std::vector<double> weigh(const std::vector<Pose>& particles, 
-    const LaserScan& laser_scan, RayCaster& caster, double forward_offset = 25) 
+    const LaserScan& laser_scan, RayCaster& caster) 
   {
-    double cumweights = 0, lambda = 5e-3, percentage = 0.75; 
+    double cumweights = 0, forward_offset = 25; 
     static std::vector<double> weights; weights.resize(particles.size()); 
-    static std::vector<double> errors; errors.resize(caster.nr_sigmas >> 1); 
+    static std::vector<double> errors; errors.resize(number_sigmas >> 1); 
 
     // process each particle by comparing with the expected scattered rays.  
     for (int index = 0; index < particles.size(); ++index) {
@@ -29,20 +29,20 @@ namespace {
       // start at the first available scattered ray and go over the window.
       double theta = modulus(particle.theta - halfpi, dblpi);
       size_t initial = std::distance(caster.offsets.begin(), std::upper_bound(
-        caster.offsets.begin(), caster.offsets.end(), theta)) % caster.nr_sigmas;  
+        caster.offsets.begin(), caster.offsets.end(), theta)) % number_sigmas;  
 
       // compute the error between each hit and its corresponding expected value.  
-      double angle = modulus(caster.offsets[initial] - theta, dblpi), step = dblpi / caster.nr_sigmas; 
+      double angle = modulus(caster.offsets[initial] - theta, dblpi), step = dblpi / number_sigmas; 
       for (int prog = 0; angle < pi; angle += step, prog++) 
         errors[prog] = std::fabs(laser_scan[static_cast<size_t>(angle * 180 / pi)] - 
-          scatter[(initial + prog) % caster.nr_sigmas]); 
+          scatter[(initial + prog) % number_sigmas]); 
 
       // it is probably a good idea to eliminate the top 25% of the errors
       // due to the dynamic nature of the environment, and measurement range limitation. 
-      size_t nth = errors.size() * percentage; 
+      size_t nth = errors.size() * error_percentage; 
       std::nth_element(errors.begin(), errors.begin() + nth, errors.end()); 
       double sumerrors = std::accumulate(errors.begin(), errors.begin() + nth, 0); 
-      double weight = std::exp(-lambda * sumerrors / nth) * prior; cumweights += weight; 
+      double weight = std::exp(-error_lambda * sumerrors / nth) * prior; cumweights += weight; 
 
       weights[index] = weight; 
     }

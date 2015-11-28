@@ -18,7 +18,9 @@ namespace {
     double delta_trans = std::hypot(cur.y - prev.y, cur.x - prev.x); 
     double delta_rot2 = truncate(cur.theta - prev.theta - delta_rot1); 
 
-    static double alpha1 = 1e-5, alpha2 = 1e-5, alpha3 = 1e-5, alpha4 = 1e-5; 
+    double alpha1 = noise_alpha, alpha2 = noise_alpha;
+    double alpha3 = noise_alpha, alpha4 = noise_alpha; 
+
     static std::normal_distribution<double> sampler;
     static std::default_random_engine generator; 
 

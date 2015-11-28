@@ -20,7 +20,7 @@ namespace {
     double x, y, theta; 
     for (int index = 0; index < number; ++index) { 
       do { x = xdis(generator); y = ydis(generator); }
-      while (grid_map.unocc(x, y) < grid_map.threshold); 
+      while (grid_map.unocc(x, y) < prob_threshold); 
       particles.emplace_back(Pose{x, y, thetadis(generator)}); 
     }
 

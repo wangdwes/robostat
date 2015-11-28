@@ -86,6 +86,9 @@ namespace {
 int main(int argc, char *argv[])
 {
   if (argc < 3) {
+    st
+
+
     std::cout << "Error: two arguments expected." << std::endl;
     return 0; 
   }

@@ -36,7 +36,6 @@ namespace {
 
   struct RayCaster
   {
-    constexpr static size_t nr_sigmas = 24; // the number of sigma (sampling) points. 
 
     std::vector<double> offsets; 
     std::unordered_map<DiscreteCoord, const std::vector<double>, DiscreteCoordHasher> cache; 
@@ -46,10 +45,10 @@ namespace {
     RayCaster(GridMap* _grid_map): grid_map(_grid_map) {
 
       // construct the sampling points. 
-      offsets.resize(nr_sigmas); 
+      offsets.resize(number_sigmas); 
       std::iota(offsets.begin(), offsets.end(), 0);
       std::transform(offsets.begin(), offsets.end(), offsets.begin(),  
-          std::bind1st(std::multiplies<double>(), dblpi / nr_sigmas)); 
+          std::bind1st(std::multiplies<double>(), dblpi / number_sigmas)); 
     }
 
     // cast the ray originated from the specified pose. 
@@ -60,7 +59,7 @@ namespace {
       double yinc = std::sin(pose.theta) * grid_map->resolution; 
       double x = pose.x, y = pose.y;
 
-      while (grid_map->unocc(x, y) > grid_map->threshold) x += xinc, y += yinc; 
+      while (grid_map->unocc(x, y) > prob_threshold) x += xinc, y += yinc; 
       return std::hypot(x - pose.x, y - pose.y); 
     } 
 

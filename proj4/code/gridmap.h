@@ -22,8 +22,6 @@ namespace {
     size_t width = 0;               // pixel
     size_t height = 0;              // pixel
 
-    double threshold = 0.85; 
-
     // a convenience constructor for reading in the laser scan directly. 
     explicit GridMap(): GridMap(std::string()) {}
     explicit GridMap(const std::string& file) { parse(file); }
