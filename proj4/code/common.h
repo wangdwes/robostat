@@ -15,7 +15,7 @@ namespace {
   typedef std::vector<double> LaserScan;
 
   const double pi = 3.14159265358;
-  const double halfpi = pi / 2.0; 
+  const double halfpi = pi * 0.5; 
   const double dblpi = pi * 2.0; 
 
   // like std::fmod, but works on negative numbers. 

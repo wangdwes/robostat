@@ -13,94 +13,76 @@
 #include <common.h>
 #include <gridmap.h>
 
-namespace {
+namespace { 
 
-// internal data structure for the cache. 
-struct DiscretePosition
-{
-  int x;
-  int y;
+  // internal data structure for the cache, 
+  // and its hasher function. 
 
-  DiscretePosition() {}
-  DiscretePosition(int _x, int _y): x(_x), y(_y) {}
-  
-  bool operator==(const DiscretePosition& other) const 
-  { return x == other.x && y == other.y; }
-};
-
-// hasher for the data structure as declared above. 
-struct DiscretePositionHasher
-{
-  std::size_t operator()(const DiscretePosition& pos) const 
-  { return std::hash<int>()(pos.x) ^ std::hash<int>()(pos.y); }
-}; 
-
-struct RayCaster 
-{
-  double threshold = 0.20; 
-  size_t nr_sigmas = 40; 
-
-  std::vector<double> offsets; 
-  std::unordered_map<DiscretePosition, std::vector<double>, DiscretePositionHasher> cache; 
-
-  // a convenience constructor. 
-  RayCaster(): RayCaster(nullptr) {}
-  RayCaster(GridMap* _grid_map): grid_map(_grid_map) {
-    // populate the sigma points. 
-    offsets.resize(nr_sigmas); 
-    std::iota(offsets.begin(), offsets.end(), 0); 
-    std::transform(offsets.begin(), offsets.end(), offsets.begin(),
-      [=](double d) { return d * dblpi / nr_sigmas; }); 
-  }
- 
-  // cast the ray originated from the specified pose. 
-  // this either returns the distance or infinity. 
-  double cast(const Pose& pose) 
+  struct DiscreteCoord
   {
-    double horzinc = std::cos(pose.theta) * grid_map->resolution; 
-    double vertinc = std::sin(pose.theta) * grid_map->resolution; 
-    double x = pose.x, y = pose.y;
-    double distance = std::numeric_limits<double>::infinity();
+    int x, y; 
+    DiscreteCoord(): DiscreteCoord(0, 0) {}
+    DiscreteCoord(int _x, int _y): x(_x), y(_y) {}
 
-    while (true) {
+    bool operator==(const DiscreteCoord& other) const 
+    { return x == other.x && y == other.y; }
+  }; 
 
-      // if the probability is reasonable, this is considered as a hit.       
-      double prob = grid_map->prob(x, y); 
-      if (prob <= threshold) { 
-        distance = std::hypot(x - pose.x, y - pose.y); break; 
+  struct DiscreteCoordHasher 
+  {
+    std::size_t operator()(const DiscreteCoord& coord) const 
+    { return std::hash<int>()(coord.x) ^ std::hash<int>()(coord.y); }
+  };
+
+  struct RayCaster
+  {
+    constexpr static size_t nr_sigmas = 24; // the number of sigma (sampling) points. 
+
+    std::vector<double> offsets; 
+    std::unordered_map<DiscreteCoord, const std::vector<double>, DiscreteCoordHasher> cache; 
+
+    // a convenience constructor.
+    RayCaster(): RayCaster(nullptr) {}  
+    RayCaster(GridMap* _grid_map): grid_map(_grid_map) {
+
+      // construct the sampling points. 
+      offsets.resize(nr_sigmas); 
+      std::iota(offsets.begin(), offsets.end(), 0);
+      std::transform(offsets.begin(), offsets.end(), offsets.begin(),  
+          std::bind1st(std::multiplies<double>(), dblpi / nr_sigmas)); 
+    }
+
+    // cast the ray originated from the specified pose. 
+    // this always returns a distance, valid or invalid. 
+    double cast(const Pose& pose)
+    {
+      double xinc = std::cos(pose.theta) * grid_map->resolution; 
+      double yinc = std::sin(pose.theta) * grid_map->resolution; 
+      double x = pose.x, y = pose.y;
+
+      while (grid_map->unocc(x, y) > grid_map->threshold) x += xinc, y += yinc; 
+      return std::hypot(x - pose.x, y - pose.y); 
+    } 
+
+    // cast the rays at the specified coordinate,
+    // but on angles as specified in offsets instead. 
+    const std::vector<double>& scatter(const Pose& pose) 
+    { 
+      DiscreteCoord coord(grid_map->discretizeX(pose.x), grid_map->discretizeY(pose.y)); 
+      if (cache.find(coord) == cache.end()) { 
+        std::vector<double> distances; 
+        for (double offset: offsets) 
+          distances.emplace_back(cast({pose.x, pose.y, offset})); 
+        cache.emplace(coord, distances); 
       }
-
-      x += horzinc;
-      y += vertinc;
+      return cache[coord]; 
     }
 
-    return distance; 
-  }
+    // please do not alter this, 
+    // otherwise the cache has to be re-built. 
+    GridMap *grid_map = nullptr; 
 
-  // cast the rays at the specified position, but instead on
-  // angles as specified in offsets
-  const std::vector<double>& scatter(const Pose& pose)
-  {
-    int discrete_x = (pose.x - grid_map->autoshifted_x) / grid_map->resolution; 
-    int discrete_y = (pose.y - grid_map->autoshifted_y) / grid_map->resolution;  
-  
-    // if this position has never been queried, ...
-    DiscretePosition pos(discrete_x, discrete_y);
-    if (cache.find(pos) == cache.end()) {
-      std::vector<double> distances; 
-      for (double offset: offsets)  
-        distances.emplace_back(cast({pose.x, pose.y, offset})); 
-      cache.emplace(pos, distances); 
-    }
- 
-    return cache[pos]; 
-  } 
-
-  // please do not alter this, 
-  // otherwise the cache has to be re-built. 
-  GridMap *grid_map = nullptr; 
-
-};
+  };
 
 }
 

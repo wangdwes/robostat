@@ -5,21 +5,25 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 #include <common.h>
 #include <raycaster.h>
 
 namespace {
 
   const std::vector<double> weigh(const std::vector<Pose>& particles, 
-    const LaserScan& laser_scan, RayCaster& caster) 
+    const LaserScan& laser_scan, RayCaster& caster, double forward_offset = 25) 
   {
-    double cumweights = 0, lambda = 1e-2, percentage = 0.75; 
+    double cumweights = 0, lambda = 5e-3, percentage = 0.75; 
     static std::vector<double> weights; weights.resize(particles.size()); 
     static std::vector<double> errors; errors.resize(caster.nr_sigmas >> 1); 
 
     // process each particle by comparing with the expected scattered rays.  
     for (int index = 0; index < particles.size(); ++index) {
-      const auto& particle = particles[index]; 
+      Pose particle = particles[index]; 
+      double prior = std::max(caster.grid_map->unocc(particle.x, particle.y), 0.0); 
+      particle.x += forward_offset * cos(particle.theta); 
+      particle.y += forward_offset * sin(particle.theta); 
       const auto scatter = caster.scatter(particle);
 
       // start at the first available scattered ray and go over the window.
@@ -38,7 +42,7 @@ namespace {
       size_t nth = errors.size() * percentage; 
       std::nth_element(errors.begin(), errors.begin() + nth, errors.end()); 
       double sumerrors = std::accumulate(errors.begin(), errors.begin() + nth, 0); 
-      double weight = std::exp(-lambda * sumerrors / nth); cumweights += weight; 
+      double weight = std::exp(-lambda * sumerrors / nth) * prior; cumweights += weight; 
 
       weights[index] = weight; 
     }

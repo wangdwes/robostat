@@ -11,19 +11,20 @@
 
 namespace {
 
-  std::vector<Pose> resample(std::vector<Pose>& particles, const std::vector<double>& weights, int count = -1) 
+  std::vector<Pose>& resample(std::vector<Pose>& particles, const std::vector<double>& weights) 
   {
     // we could have instanitated everything in a class, but nope. 
     static std::vector<Pose> resampled_particles; 
     static std::default_random_engine generator; 
     static std::uniform_real_distribution<double> sampler; 
-    resampled_particles.resize(count == -1? particles.size(): count); 
+    resampled_particles.resize(particles.size()); 
 
     // resample in linear time.  
     double step = 1.0 / static_cast<double>(particles.size()); 
-    double remainder = sampler(generator), cumul = weights.front(); 
-    for (int spot = 0, index = 0; spot < particles.size(); ++spot, remainder += step) {
+    double remainder = sampler(generator) * step, cumul = weights.front(); 
+    for (int spot = 0, index = 0; spot < particles.size(); ++spot, (remainder += step)) {
       while (remainder > cumul) cumul += weights[++index]; 
+      if (index == particles.size()) std::cout << "NOPE" << std::endl;
       resampled_particles[spot] = particles[index]; 
     }
 
