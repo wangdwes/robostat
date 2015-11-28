@@ -19,6 +19,7 @@ namespace {
   double noise_alpha = 1e-5; 
   double prob_threshold = 0.85; 
   size_t number_sigmas = 24; 
+  size_t number_particles = 3000; 
 
   const double pi = 3.14159265358;
   const double halfpi = pi * 0.5; 

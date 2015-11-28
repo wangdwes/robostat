@@ -1,5 +1,6 @@
 
 #define VISUAL_ENABLED
+#define SAVE_FRAMES
  
 #include <iostream>
 #include <string>
@@ -24,17 +25,18 @@
 
 namespace {
 
-  void process(
-    const std::string& map_file,
-    const std::string& log_file, size_t nr_particles = 3000)
+  bool process(const std::string& map_file, const std::string& log_file)
   {
     // instantiate a bunch of stuff, useful or not. 
     GridMap grid(map_file); 
     RayCaster caster(&grid);
     LogReader reader(log_file); 
+  
+    if (grid.unoccupancy.empty()) return false; 
+    if (!reader.ifs.is_open()) return false; 
 
     // inject a bunch of particles according to some prior uniform distribution.
-    auto particles = inject(nr_particles, grid); 
+    auto particles = inject(number_particles, grid); 
 
     std::pair<std::string, std::shared_ptr<void>> entry; 
     Odometry prevodom, curodom; bool prevodom_valid = false; int count = 0; 
@@ -76,17 +78,31 @@ namespace {
       // show the map and delay a bit. 
       cv::imshow("Map", frame); 
       cv::waitKey(1);
-#endif  
+#ifdef SAVE_FRAMES
+      std::ostringstream name; 
+      name << "frames/frame" << count << ".jpg"; 
+      cv::imwrite(name.str().c_str(), frame); 
+#endif
+#endif
 
     }
+
+    return true;  
   }
 }
 
+void printUsage(const char *name)
+{
+  std::cout << "Usage: " << name << " MAP_FILE LOG_FILE [OPTION]..." << std::endl; 
+  std::cout << "Run particle filter on the map as described in MAP_FILE, " << std::endl;
+  std::cout << "using the odometry and laser scan information contained in LOG_FILE." << std::endl;
+  std::cout << "-- See common.h for configurable parameters." << std::endl;
+}
 
 int main(int argc, char *argv[])
 {
   if (argc < 3) {
-    std::cout << "Error: two arguments expected." << std::endl;
+    printUsage(argv[0]); 
     return 0; 
   }
 
@@ -94,11 +110,13 @@ int main(int argc, char *argv[])
   start = std::chrono::system_clock::now();
 
   // everything happens right here. 
-  process(argv[1], argv[2]); 
+  if (!process(argv[1], argv[2])) {
+    printUsage(argv[0]); 
+    return 0; 
+  }
 
   end = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
   std::cout << "Time elapsed: " << elapsed_seconds.count() << " seconds." << std::endl;
-
   return 0;
 }

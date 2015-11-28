@@ -49,7 +49,7 @@ namespace {
 
       std::ifstream ifs(file);
       if (!ifs.is_open()) {
-        std::cerr << "Unable to open the map file." << std::endl;
+        std::cerr << "Error: Unable to open the map file." << std::endl;
         return false;
       }
 
